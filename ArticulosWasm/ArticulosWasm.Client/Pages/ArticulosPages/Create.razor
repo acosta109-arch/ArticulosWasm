@@ -1,0 +1,113 @@
+﻿@page "/Create/Articulos"
+@rendermode InteractiveServer
+@inject NavigationManager navigation
+@inject HttpClient httpClient
+
+<PageTitle>Crear nuevo articulo</PageTitle>
+<EditForm Model="articulos" OnValidSubmit="Crear">
+    <DataAnnotationsValidator />
+    <div class="container">
+        <div class="card shadow-lg">
+            @*Header*@
+            <div class="card-header bg-secondary text-white">
+                <h1><strong>Crear nuevo art&iacute;culo</strong></h1>
+            </div>
+            @*Body*@
+            <div class="card-body">
+                @*Datos*@
+                <label for="id" class="form-label"><strong>Art&iacute;culoId</strong></label>
+                <InputNumber id="id" class="form-control" @bind-Value="articulos.ArticuloId" readonly></InputNumber>
+
+                <label for="descripcion" class="form-label"><strong>Descripci&oacute;n</strong></label>
+                <InputText id="descripcion" class="form-control" @bind-Value="articulos.Descripcion"></InputText>
+                <ValidationMessage For="@(() => articulos.Descripcion)"></ValidationMessage>
+
+                <label for="costo" class="form-label"><strong>Costo</strong></label>
+                <InputNumber id="costo" class="form-control" @bind-Value="articulos.Costo" @oninput="CalcularPrecio"></InputNumber>
+                <ValidationMessage For="@(() => articulos.Costo)"></ValidationMessage>
+
+                <label for="ganancia" class="form-label"><strong>Ganancia</strong></label>
+                <InputNumber id="ganancia" class="form-control" @bind-Value="articulos.Ganancia" @oninput="CalcularPrecio"></InputNumber>
+                <ValidationMessage For="@(() => articulos.Ganancia)"></ValidationMessage>
+
+                <label for="precio" class="form-label"><strong>Precio</strong></label>
+                <InputNumber id="precio" class="form-control" @bind-Value="articulos.Precio" readonly></InputNumber>
+                <ValidationMessage For="@(() => articulos.Precio)"></ValidationMessage>
+            </div>
+            @*Footer*@
+            <div class="card-footer">
+                <button type="button" class="btn btn-primary" @onclick="Volver"><Icon Name="IconName.Arrow90DegLeft"></Icon> Volver</button>
+                <button type="submit" class="btn btn-success"><Icon Name="IconName.Floppy"></Icon> Guardar</button>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    public Articulos articulos { get; set; } = new Articulos();
+   // public List<ToastMessage> MensajeToast { get; set; } = new List<ToastMessage>();
+
+    public async Task<bool> Validar()
+    {
+        var articulosExistentes = await httpClient.GetFromJsonAsync<List<Articulos>>("api/Articulos");
+        return articulosExistentes.Any(a => a.Descripcion.Equals(articulos.Descripcion, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public async Task Crear()
+    {
+        if (articulos.Precio <= 1)
+        {
+            //Mensaje(ToastType.Danger, "Error, el precio tiene que ser mayor a 1.");
+            return;
+        }
+
+        if (articulos.Precio <= articulos.Costo)
+        {
+           // Mensaje(ToastType.Danger, "Error, el precio tiene que ser mayor que el costo.");
+            return;
+        }
+
+        if (!await Validar())
+        {
+            var response = await httpClient.PostAsJsonAsync("api/Articulos", articulos);
+            if (response.IsSuccessStatusCode)
+            {
+                //Mensaje(ToastType.Success, "Artículo guardado correctamente.");
+                articulos = new Articulos();
+            }
+            else
+            {
+                //Mensaje(ToastType.Danger, "El artículo no pudo ser guardado.");
+            }
+        }
+        else
+        {
+            //Mensaje(ToastType.Danger, "El artículo con la misma descripción ya existe.");
+        }
+    }
+
+    private void CalcularPrecio()
+    {
+        articulos.Precio = (articulos.Costo * articulos.Ganancia / 100) + articulos.Costo;
+        StateHasChanged();
+    }
+
+   /* private ToastMessage CreateToastMessage(ToastType toastType, string mensaje)
+    => new ToastMessage
+        {
+            Type = toastType,
+            Title = "Notificación",
+            HelpText = $"{DateTime.Now}",
+            Message = mensaje,
+        };
+
+    private void Mensaje(ToastType toastType, string mensaje)
+    {
+        MensajeToast.Add(CreateToastMessage(toastType, mensaje));
+    }*/
+
+    public void Volver()
+    {
+        navigation.NavigateTo("/Index/Articulos");
+    }
+}
